@@ -3,6 +3,7 @@
 import os
 import logging
 import argparse
+import json
 
 from jicbioimage.core.image import Image
 from jicbioimage.core.transform import transformation
@@ -11,6 +12,26 @@ from jicbioimage.core.io import AutoName, AutoWrite
 __version__ = "0.1.0"
 
 AutoName.prefix_format = "{:03d}_"
+
+
+class DataFilePathManager(object):
+
+    def __init__(self, manifest_path):
+        self.manifest_path = os.path.abspath(manifest_path)
+        self.manifest_root = os.path.dirname(self.manifest_path)
+        self._parse_manifest()
+
+    def _parse_manifest(self):
+        with open(self.manifest_path, "r") as fh:
+            m = json.load(fh)
+            self.file_list = m["file_list"]
+
+    def __iter__(self):
+        for item in self.file_list:
+            if item["mimetype"] == "image/png":
+                tag, _ = item["path"].split("/", 1)
+                apath = os.path.join(self.manifest_root, item["path"])
+                yield apath, tag
 
 
 @transformation
@@ -26,22 +47,17 @@ def analyse_file(fpath, output_directory):
     image = identity(image)
 
 
-def analyse_directory(input_directory, output_directory):
-    """Analyse all the files in a directory."""
-    logging.info("Analysing files in directory: {}".format(input_directory))
-    for fname in os.listdir(input_directory):
-        fpath = os.path.join(input_directory, fname)
-        analyse_file(fpath, output_directory)
-
-
 def main():
     # Parse the command line arguments.
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input_source", help="Input file/directory")
+    parser.add_argument("manifest_file", help="Input manifest file")
     parser.add_argument("output_dir", help="Output directory")
     parser.add_argument("--debug", default=False, action="store_true",
                         help="Write out intermediate images")
     args = parser.parse_args()
+
+    if not os.path.isfile(args.manifest_file):
+        parser.error("No such manifest file: {}".format(args.manifest_file))
 
     # Create the output directory if it does not exist.
     if not os.path.isdir(args.output_dir):
@@ -65,12 +81,15 @@ def main():
     logging.info("Script version: {}".format(__version__))
 
     # Run the analysis.
-    if os.path.isfile(args.input_source):
-        analyse_file(args.input_source, args.output_dir)
-    elif os.path.isdir(args.input_source):
-        analyse_directory(args.input_source, args.output_dir)
-    else:
-        parser.error("{} not a file or directory".format(args.input_source))
+    fpath_iterator = DataFilePathManager(args.manifest_file)
+
+    for fpath, tag in fpath_iterator:
+        print(fpath, tag)
+        out_dir = os.path.join(args.output_dir, tag)
+        if not os.path.isdir(out_dir):
+            os.mkdir(out_dir)
+        AutoName.directory = out_dir
+        analyse_file(fpath, out_dir)
 
 if __name__ == "__main__":
     main()
