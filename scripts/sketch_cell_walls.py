@@ -9,45 +9,19 @@ import os
 import logging
 import argparse
 
-import skimage.morphology
-import skimage.filters
-
 from jicbioimage.core.image import Image
-from jicbioimage.core.transform import transformation
 from jicbioimage.core.io import AutoName, AutoWrite
 
-import jicbioimage.transform
+from utils import (
+    identity,
+    local_otsu,
+    threshold_local_otsu,
+    remove_small_objects,
+)
 
 __version__ = "0.3.0"
 
 AutoName.prefix_format = "{:03d}_"
-
-
-@transformation
-def identity(image):
-    """Return the image as is."""
-    logging.info("identity({})".format(repr(image)))
-    return image
-
-
-@transformation
-def local_otsu(image, radius):
-    logging.info("local_otsu({}, radius={})".format(repr(image), radius))
-    selem = skimage.morphology.disk(radius)
-    return skimage.filters.rank.otsu(image, selem)
-
-
-@transformation
-def threshold_local_otsu(image, local_otsu_im):
-    logging.info("threshold_local_otsu({}, {})".format(
-        repr(image), repr(local_otsu_im)))
-    return image > local_otsu_im
-
-
-def remove_small_objects(image, min_size):
-    logging.info("remove_small_objects({}, min_size={})".format(
-        repr(image), min_size))
-    return jicbioimage.transform.remove_small_objects(image, min_size)
 
 
 def analyse_file(fpath, output_directory):
