@@ -5,9 +5,23 @@ import logging
 import argparse
 import json
 
+import skimage.filters
+import skimage.morphology
+
 from jicbioimage.core.image import Image
 from jicbioimage.core.transform import transformation
 from jicbioimage.core.io import AutoName, AutoWrite
+
+from jicbioimage.transform import (
+    threshold_otsu,
+    find_edges_sobel,
+    remove_small_objects,
+    invert,
+    erode_binary,
+    dilate_binary,
+)
+
+from jicbioimage.segment import connected_components, watershed_with_seeds
 
 __version__ = "0.1.0"
 
@@ -40,11 +54,64 @@ def identity(image):
     return image
 
 
+@transformation
+def grayscale(image):
+    """If more than one channel return green channel."""
+    if len(image.shape) > 2:
+        return image[:, :, 1]
+    return image
+
+
+@transformation
+def threshold_adaptive_median(image, block_size):
+    return skimage.filters.threshold_adaptive(image,
+                                             block_size=block_size,
+                                             method="median")
+
+
+@transformation
+def fill_holes(image, max_size):
+    aw = AutoWrite.on
+    AutoWrite.on = False
+    image = invert(image)
+    image = remove_small_objects(image, min_size=max_size)
+    image = invert(image)
+    AutoWrite.on = aw
+    return image
+
+
+@transformation
+def skeletonize(image):
+    return skimage.morphology.skeletonize(image)
+
+
 def analyse_file(fpath, output_directory):
     """Analyse a single file."""
     logging.info("Analysing file: {}".format(fpath))
     image = Image.from_file(fpath)
-    image = identity(image)
+    image = grayscale(image)
+    print(image.shape)
+
+    outline = threshold_otsu(image)
+    outline = remove_small_objects(outline, min_size=3)
+    outline = skeletonize(image)
+    outline = dilate_binary(image)
+
+    seeds = threshold_adaptive_median(image, 31)
+
+    seeds = fill_holes(seeds, 10)
+    seeds = remove_small_objects(seeds, min_size=10)
+    seeds = invert(seeds)
+    seeds = connected_components(seeds, background=0)
+
+#   seeds = remove_small_objects(seeds, min_size=100)
+#   seeds = invert(seeds)
+#   seeds = fill_holes(seeds, max_size=3)
+#   seeds = erode_binary(seeds)
+#   seeds = remove_small_objects(seeds, min_size=4)
+#   seeds = connected_components(seeds, background=0)
+
+    segmentation = watershed_with_seeds(-image, seeds=seeds)
 
 
 def main():
