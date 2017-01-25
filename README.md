@@ -39,8 +39,15 @@ $ bash run_docker_container.sh
 [root@048bd4bd961c /]#
 ```
 
-Now you can run the image analysis.
+Now you can run the script to generate the cell wall sketch.
 
 ```
-[root@048bd4bd961c /]# python scripts/analysis.py --debug data/ output/
+[root@048bd4bd961c /]# python scripts/sketch_cell_walls.py --debug data/leaf.png output/
+```
+
+After hand curating the output segmentation it can be
+post-processed to calculate the areas of cells.
+
+```
+[root@048bd4bd961c /]# python scripts/calculate_cell_areas.py --debug output/leaf-wall-outline.png
 ```
