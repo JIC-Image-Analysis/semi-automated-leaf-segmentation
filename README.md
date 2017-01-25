@@ -49,5 +49,5 @@ After hand curating the output segmentation it can be
 post-processed to calculate the areas of cells.
 
 ```
-[root@048bd4bd961c /]# python scripts/calculate_cell_areas.py --debug output/leaf-wall-outline.png data/leaf-mask.png
+[root@048bd4bd961c /]# python scripts/calculate_cell_areas.py --debug output/leaf-wall-outline.png data/leaf-mask.png output/
 ```
