@@ -64,4 +64,4 @@ def connected_components(image, connectivity=2, background=0):
 def watershed_with_seeds(image, seeds, mask=None):
     logging.info("watershed_with_seeds({}, {}, maks={})".format(
         repr(image), seeds, mask))
-    return watershed_with_seeds(image, seeds, mask)
+    return jicbioimage.segment.watershed_with_seeds(image, seeds, mask)
