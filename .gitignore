@@ -2,3 +2,5 @@
 *.pyc
 
 bash_history
+
+output/
